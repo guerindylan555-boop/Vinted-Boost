@@ -1,12 +1,12 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { ensureSchema, getDb } from '../_lib/db';
-import { cors } from 'hono/cors';
+import { corsStrict } from '../_lib/cors';
 
 const app = new Hono();
 
-// CORS for cross-origin requests (Expo web dev, native hitting prod)
-app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'], allowHeaders: ['Content-Type'] }));
+// Restrictive CORS (allow only env-configured origins)
+app.use('*', corsStrict);
 
 // Health
 app.get('/health', (c) => c.json({ status: 'ok' }));

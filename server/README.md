@@ -12,6 +12,7 @@ Turso upload backend (Hono)
 - Env vars (Vercel → Project Settings → Environment Variables):
   - `TURSO_DATABASE_URL`
   - `TURSO_AUTH_TOKEN`
+  - `ALLOWED_ORIGINS` (ex: `https://your-app.vercel.app,https://other.example`)
 
 - Client: utilisez `lib/upload/uploadService.ts` pour envoyer des images via `FormData`.
 

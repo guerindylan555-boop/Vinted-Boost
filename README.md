@@ -55,12 +55,14 @@ Définir ces variables (Vercel → Project → Settings → Environment Variable
 ```
 TURSO_DATABASE_URL=libsql://<your-db>.turso.io
 TURSO_AUTH_TOKEN=<turso-auth-token>
+ALLOWED_ORIGINS=https://your-app.vercel.app,https://votre-domaine-secondaire.com
 ```
 
 Optionnel pour l’app Expo native (Android/iOS):
 
 ```
 EXPO_PUBLIC_API_BASE_URL=https://your-app.vercel.app
+EXPO_PUBLIC_ADMIN_KEY=<clé-admin-optionnelle>
 ```
 
 En local, vous pouvez exporter ces variables avant de démarrer.

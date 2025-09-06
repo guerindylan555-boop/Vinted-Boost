@@ -1,11 +1,11 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { ensureSchema, getDb } from '../_lib/db';
-import { cors } from 'hono/cors';
+import { corsStrict } from '../_lib/cors';
 
 const app = new Hono();
 
-app.use('*', cors({ origin: '*', allowMethods: ['GET', 'DELETE', 'OPTIONS'], allowHeaders: ['Content-Type'] }));
+app.use('*', corsStrict);
 
 app.get('/:id', async (c) => {
   await ensureSchema();

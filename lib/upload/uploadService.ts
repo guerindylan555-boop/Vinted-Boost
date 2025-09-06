@@ -56,6 +56,9 @@ export async function uploadPickedFiles(files: PickedFile[], config: UploadConfi
     }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
+      if (res.status === 401 || res.status === 403) {
+        throw new Error('Accès API refusé (401/403). Déploiement protégé ou domaine non autorisé (CORS).');
+      }
       throw new Error(text || `Upload failed: ${res.status}`);
     }
     const json = (await res.json()) as Array<{ id: string; url: string }>;
@@ -67,7 +70,12 @@ export async function uploadPickedFiles(files: PickedFile[], config: UploadConfi
 
     return json.map((r) => r.url);
   } catch (e: any) {
-    const msg = e?.message ?? 'Erreur upload';
+    let msg = e?.message ?? 'Erreur upload';
+    if (e?.name === 'AbortError') {
+      msg = 'Délai d\’upload dépassé (30s).';
+    } else if (/Failed to fetch/i.test(String(e))) {
+      msg = 'API injoignable (réseau/CORS). Vérifiez l’URL et les origines autorisées.';
+    }
     files.forEach((f) => setError(f.id, msg));
     throw e;
   }
