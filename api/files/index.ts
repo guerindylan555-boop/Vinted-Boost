@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { corsStrict } from '../_lib/cors';
-import { supaAdmin, BUCKET } from '../_lib/supabase';
+import { getSupaAdmin, getBucket } from '../_lib/supabase';
 
 const app = new Hono();
 
@@ -22,9 +22,11 @@ app.post('/create-upload', async (c) => {
     const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
     const path = `${prefix}/${id}.${ext}`;
     const expiresIn = Math.max(60, Math.min(3600, Number(body?.expiresIn) || 600));
-    const { data, error } = await supaAdmin.storage.from(BUCKET).createSignedUploadUrl(path, expiresIn);
+    const supa = getSupaAdmin();
+    const bucket = getBucket();
+    const { data, error } = await supa.storage.from(bucket).createSignedUploadUrl(path, expiresIn);
     if (error || !data) return c.json({ error: error?.message || 'Failed to create signed upload URL' }, 500);
-    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    const { data: pub } = getSupaAdmin().storage.from(getBucket()).getPublicUrl(path);
     return c.json({ path, token: data.token, url: data.signedUrl, publicUrl: pub.publicUrl });
   } catch (e: any) {
     return c.json({ error: e?.message || 'Failed to create upload URL' }, 500);
@@ -48,7 +50,7 @@ app.get('/debug', async (c) => {
     storage: { ok: false, files: null as null | number, error: null as null | string },
   };
   try {
-    const { data, error } = await supaAdmin.storage.from(BUCKET).list('', { limit: 1 });
+    const { data, error } = getSupaAdmin().storage.from(getBucket()).list('', { limit: 1 });
     if (error) throw error;
     out.storage.ok = true;
     out.storage.files = (data || []).length;
@@ -66,11 +68,11 @@ app.get('/', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const limit = Math.max(1, Math.min(200, parseInt(c.req.query('limit') || '50', 10) || 50));
-  const { data, error } = await supaAdmin.storage.from(BUCKET).list('uploads', { limit, sortBy: { column: 'created_at', order: 'desc' } as any });
+  const { data, error } = getSupaAdmin().storage.from(getBucket()).list('uploads', { limit, sortBy: { column: 'created_at', order: 'desc' } as any });
   if (error) return c.json({ error: error.message }, 500);
   const rows = (data || []).map((o) => {
     const path = `uploads/${o.name}`;
-    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    const { data: pub } = getSupaAdmin().storage.from(getBucket()).getPublicUrl(path);
     return { id: path, url: pub.publicUrl, size: (o as any).size ?? 0, created_at: o.created_at ? new Date(o.created_at).getTime() : Date.now(), mime: undefined };
   });
   return c.json(rows);
@@ -117,9 +119,9 @@ app.post('/', async (c) => {
     const ext = (name && name.includes('.')) ? name.split('.').pop() : (mime.split('/')[1] || 'bin');
     const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
     const path = `uploads/${id}.${ext}`;
-    const { error } = await supaAdmin.storage.from(BUCKET).upload(path, file as any, { contentType: mime, upsert: true });
+    const { error } = await getSupaAdmin().storage.from(getBucket()).upload(path, file as any, { contentType: mime, upsert: true });
     if (error) return c.json({ error: error.message }, 500);
-    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    const { data: pub } = getSupaAdmin().storage.from(getBucket()).getPublicUrl(path);
     results.push({ id: path, url: pub.publicUrl, size, mime });
   }
 
@@ -133,7 +135,7 @@ app.delete('/', async (c) => {
   if (adminKey && provided !== adminKey) return c.json({ error: 'Unauthorized' }, 401);
   const id = c.req.query('id');
   if (!id) return c.json({ error: 'Missing id' }, 400);
-  const { error } = await supaAdmin.storage.from(BUCKET).remove([String(id)]);
+  const { error } = await getSupaAdmin().storage.from(getBucket()).remove([String(id)]);
   if (error) return c.json({ error: error.message }, 500);
   return c.json({ ok: true });
 });
