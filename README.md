@@ -74,3 +74,11 @@ curl -s -X POST -F "files=@/path/to/image.jpg" https://your-app.vercel.app/api/f
 # GET le fichier
 curl -I https://your-app.vercel.app/api/files/<id>
 ```
+
+## Admin fichiers
+
+- Écran: `app/admin.tsx` permet de lister et supprimer les fichiers.
+- API:
+  - GET `/api/files?limit=100[&key=ADMIN_KEY]`
+  - DELETE `/api/files/:id[?key=ADMIN_KEY]`
+- Sécurité (optionnelle): définissez `ADMIN_KEY` côté Vercel (API). Si défini, la liste/suppression requiert `?key=...`. Pour auto‑remplir dans l’app, vous pouvez définir `EXPO_PUBLIC_ADMIN_KEY` (optionnel) côté client.
