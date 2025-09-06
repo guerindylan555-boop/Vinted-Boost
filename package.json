@@ -1,41 +1,41 @@
-{
-  "name": "test2",
-  "version": "1.0.0",
-  "main": "expo-router/entry",
-  "scripts": {
-    "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "web": "expo start --web",
-    "deploy": "npx expo export -p web && npx eas-cli@latest deploy"
-  },
-  "dependencies": {
-    "@tanstack/react-query": "^5.87.1",
-    "@uploadthing/expo": "^7.2.6",
-    "expo": "^53.0.4",
-    "expo-constants": "~17.1.4",
-    "expo-file-system": "^18.1.11",
-    "expo-image-picker": "^16.1.4",
-    "expo-linking": "~7.1.4",
-    "expo-router": "~5.0.3",
-    "expo-splash-screen": "~0.30.7",
-    "expo-status-bar": "~2.2.3",
-    "hono": "^4.9.6",
-    "nativewind": "^4.1.23",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.1",
-    "react-native-gesture-handler": "~2.24.0",
-    "react-native-safe-area-context": "5.3.0",
-    "react-native-screens": "~4.10.0",
-    "react-native-web": "^0.20.0",
-    "tailwindcss": "^3.4.17",
-    "zustand": "^5.0.8"
-  },
-  "devDependencies": {
-    "@babel/core": "^7.20.0",
-    "@types/react": "~19.0.10",
-    "typescript": "~5.8.3"
-  },
-  "private": true
+﻿{
+    "name":  "test2",
+    "version":  "1.0.0",
+    "main":  "expo-router/entry",
+    "scripts":  {
+                    "start":  "expo start",
+                    "android":  "expo start --android",
+                    "ios":  "expo start --ios",
+                    "web":  "expo start --web",
+                    "deploy":  "npx expo export -p web \u0026\u0026 npx eas-cli@latest deploy"
+                },
+    "dependencies":  {
+                         "@tanstack/react-query":  "^5.87.1",
+                         "@uploadthing/expo":  "^7.2.6",
+                         "expo":  "^53.0.4",
+                         "expo-constants":  "~17.1.4",
+                         "expo-file-system":  "^18.1.11",
+                         "expo-image-picker":  "^16.1.4",
+                         "expo-linking":  "~7.1.4",
+                         "expo-router":  "~5.0.3",
+                         "expo-splash-screen":  "~0.30.7",
+                         "expo-status-bar":  "~2.2.3",
+                         "hono":  "^4.9.6",
+                         "nativewind":  "^4.1.23",
+                         "react":  "19.0.0",
+                         "react-dom":  "19.0.0",
+                         "react-native":  "0.79.1",
+                         "react-native-gesture-handler":  "~2.24.0",
+                         "react-native-safe-area-context":  "5.3.0",
+                         "react-native-screens":  "~4.10.0",
+                         "react-native-web":  "^0.20.0",
+                         "tailwindcss":  "^3.4.17",
+                         "zustand":  "^5.0.8"
+                     },
+    "devDependencies":  {
+                            "@babel/core":  "^7.20.0",
+                            "@types/react":  "~19.0.10",
+                            "typescript":  "~5.8.3"
+                        },
+    "private":  true
 }
