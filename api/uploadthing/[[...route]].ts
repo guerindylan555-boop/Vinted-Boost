@@ -13,7 +13,7 @@ const f = createUploadthing();
 export const fileRouter = {
   // Endpoint slug must match the client: endpoint: 'imageUploader'
   imageUploader: f({
-    image: { maxFileCount: 3, maxFileSize: '20MB' },
+    image: { maxFileCount: 3, maxFileSize: '16MB' },
   })
     .middleware(async ({ req }) => {
       // Place to verify auth/session if needed
@@ -36,4 +36,3 @@ app.all('*', async (c) => {
 });
 
 export default handle(app);
-
