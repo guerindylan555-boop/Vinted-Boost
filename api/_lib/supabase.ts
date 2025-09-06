@@ -13,5 +13,6 @@ export function getSupaAdmin(): SupabaseClient {
 }
 
 export function getBucket(): string {
-  return (process as any)?.env?.SUPABASE_BUCKET || 'images';
+  // Default to 'Image' to match your current bucket name unless overridden via env
+  return (process as any)?.env?.SUPABASE_BUCKET || 'Image';
 }

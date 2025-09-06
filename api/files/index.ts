@@ -50,7 +50,7 @@ app.get('/debug', async (c) => {
     storage: { ok: false, files: null as null | number, error: null as null | string },
   };
   try {
-    const { data, error } = getSupaAdmin().storage.from(getBucket()).list('', { limit: 1 });
+    const { data, error } = await getSupaAdmin().storage.from(getBucket()).list('', { limit: 1 });
     if (error) throw error;
     out.storage.ok = true;
     out.storage.files = (data || []).length;
@@ -68,7 +68,7 @@ app.get('/', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const limit = Math.max(1, Math.min(200, parseInt(c.req.query('limit') || '50', 10) || 50));
-  const { data, error } = getSupaAdmin().storage.from(getBucket()).list('uploads', { limit, sortBy: { column: 'created_at', order: 'desc' } as any });
+  const { data, error } = await getSupaAdmin().storage.from(getBucket()).list('uploads', { limit, sortBy: { column: 'created_at', order: 'desc' } as any });
   if (error) return c.json({ error: error.message }, 500);
   const rows = (data || []).map((o) => {
     const path = `uploads/${o.name}`;

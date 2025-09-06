@@ -26,7 +26,14 @@ export default function LoadingScreen() {
         let persisted = null as null | { id: string; url: string };
         try {
           if (typeof res.imageDataUrl === 'string' && res.imageDataUrl.startsWith('data:image')) {
-            persisted = await saveDataUrlToBlob(res.imageDataUrl, 'outputs');
+            // Guard against hanging network by racing a timeout
+            const ac = new AbortController();
+            const timer = setTimeout(() => ac.abort(), 15000);
+            try {
+              persisted = await saveDataUrlToBlob(res.imageDataUrl, 'outputs');
+            } finally {
+              clearTimeout(timer);
+            }
           }
         } catch {}
         const outputUrl = persisted?.url || res.imageDataUrl;
@@ -37,11 +44,18 @@ export default function LoadingScreen() {
           const base = String(baseEnv);
           const endpoint = base ? `${base.replace(/\/$/, '')}/api/history` : '/api/history';
           const inputUrl = (data.inputDataUrl && data.inputDataUrl.startsWith('http')) ? data.inputDataUrl : null;
-          await fetch(endpoint, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ input_url: inputUrl, output_url: outputUrl }),
-          }).catch(() => {});
+          const ac2 = new AbortController();
+          const t2 = setTimeout(() => ac2.abort(), 8000);
+          try {
+            await fetch(endpoint, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ input_url: inputUrl, output_url: outputUrl }),
+              signal: ac2.signal,
+            }).catch(() => {});
+          } finally {
+            clearTimeout(t2);
+          }
         } catch {}
         router.replace({ pathname: '/result', params: { run } });
       } catch (e: any) {
