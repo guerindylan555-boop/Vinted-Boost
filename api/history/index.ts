@@ -32,6 +32,5 @@ app.post('/', async (c) => {
   return c.json({ id });
 });
 
-export const config = { runtime: 'nodejs' };
+export const config = { runtime: 'nodejs20.x' };
 export default handle(app);
-

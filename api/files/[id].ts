@@ -18,7 +18,7 @@ app.get('/:id', async (c) => {
 // Prefer DELETE /api/files?id=uploads/uuid.ext (implemented in index.ts)
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'nodejs20.x',
 };
 
 export default handle(app);

@@ -141,7 +141,7 @@ app.delete('/', async (c) => {
 });
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'nodejs20.x',
 };
 
 export default handle(app);

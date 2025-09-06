@@ -1,8 +1,8 @@
-import { Hono } from 'hono';
-import { handle } from 'hono/vercel';
+export const config = { runtime: 'nodejs20.x' };
 
-const app = new Hono();
-app.get('/', (c) => c.json({ status: 'ok' }));
-
-export const config = { runtime: 'nodejs' };
-export default handle(app);
+export default function handler() {
+  return new Response(JSON.stringify({ status: 'ok' }), {
+    status: 200,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}
