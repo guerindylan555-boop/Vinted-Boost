@@ -1,19 +1,8 @@
 {
   "version": 2,
   "functions": {
-    "api/uploadthing/**": {
-      "runtime": "edge"
-    }
+    "api/uploadthing/**": { "runtime": "edge" }
   },
-  "builds": [
-    {
-      "src": "package.json",
-      "use": "@vercel/static-build",
-      "config": { "distDir": "dist" }
-    }
-  ],
-  "routes": [
-    { "src": "/api/(.*)", "dest": "/api/$1" },
-    { "src": "/(.*)", "dest": "/dist/$1" }
-  ]
+  "buildCommand": "npm run vercel-build",
+  "outputDirectory": "dist"
 }
