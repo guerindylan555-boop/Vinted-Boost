@@ -3,7 +3,7 @@ import { handle } from 'hono/vercel';
 import { createUploadthing, type FileRouter, createRouteHandler } from 'uploadthing/server';
 
 export const config = {
-  runtime: 'nodejs',
+  runtime: 'edge',
 };
 
 const app = new Hono();
