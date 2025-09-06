@@ -41,21 +41,20 @@ Réglages (clé API dans l’UI)
 - Production: privilégier un appel côté serveur (Fastify) pour ne pas exposer la clé. Ici, c’est un MVP client-side.
 - Vous pouvez enrichir (poses multiples, étapes temps réel, etc.).
 
-## Upload via Turso (nouveau)
+## Upload via Vercel Blob (nouveau)
 
-- Backend: `api/files` utilise Turso pour stocker les blobs et renvoyer des URLs publiques.
+- Backend: `api/files` stocke les images dans Vercel Blob (public) et renvoie les URLs.
 - Front: `lib/upload/uploadService.ts` envoie les fichiers via `FormData` (web et natif) et met à jour `useUploadStore`.
-- Limites: images uniquement, max 3 fichiers, max 16MB par fichier.
- - Note Vercel: les Serverless Functions ont une limite de taille de requête d’environ 5MB. Au‑delà, envisagez un stockage objet (S3/R2/Vercel Blob) et n’enregistrez dans Turso que les métadonnées.
+- Limites: images uniquement, max 3 fichiers, max 16MB par fichier. Les Serverless Functions peuvent limiter la taille; privilégiez des fichiers modestes.
 
 ### Configuration requise
 
 Définir ces variables (Vercel → Project → Settings → Environment Variables):
 
 ```
-TURSO_DATABASE_URL=libsql://<your-db>.turso.io
-TURSO_AUTH_TOKEN=<turso-auth-token>
-ALLOWED_ORIGINS=https://your-app.vercel.app,https://votre-domaine-secondaire.com
+ALLOWED_ORIGINS=https://your-app.vercel.app,http://localhost:19006
+# Optionnel: BLOB_READ_WRITE_TOKEN (si requis selon votre configuration)
+BLOB_READ_WRITE_TOKEN=<token>
 ```
 
 Optionnel pour l’app Expo native (Android/iOS):
@@ -73,9 +72,6 @@ En local, vous pouvez exporter ces variables avant de démarrer.
 # POST un fichier (web: via un formulaire; shell: via curl)
 curl -s -X POST -F "files=@/path/to/image.jpg" https://your-app.vercel.app/api/files | jq
 
-# GET le fichier
-curl -I https://your-app.vercel.app/api/files/<id>
-
 # Health
 curl -s https://your-app.vercel.app/api/files/health
 ```
@@ -85,5 +81,5 @@ curl -s https://your-app.vercel.app/api/files/health
 - Écran: `app/admin.tsx` permet de lister et supprimer les fichiers.
 - API:
   - GET `/api/files?limit=100[&key=ADMIN_KEY]`
-  - DELETE `/api/files/:id[?key=ADMIN_KEY]`
+  - DELETE `/api/files?id=uploads/<uuid>.<ext>[&key=ADMIN_KEY]`
 - Sécurité (optionnelle): définissez `ADMIN_KEY` côté Vercel (API). Si défini, la liste/suppression requiert `?key=...`. Pour auto‑remplir dans l’app, vous pouvez définir `EXPO_PUBLIC_ADMIN_KEY` (optionnel) côté client.

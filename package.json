@@ -21,7 +21,7 @@
                          "expo-splash-screen":  "~0.30.7",
                          "expo-status-bar":  "~2.2.3",
                          "hono":  "^4.9.6",
-                         "@libsql/client": "^0.14.0",
+                         "@vercel/blob": "^0.23.3",
                          "nativewind":  "^4.1.23",
                          "react":  "19.0.0",
                          "react-dom":  "19.0.0",

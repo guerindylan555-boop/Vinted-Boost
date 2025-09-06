@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { View, Text, TouchableOpacity, ScrollView, ActivityIndicator, Alert, TextInput } from 'react-native';
 
-type FileRow = { id: string; mime: string; size: number; created_at: number };
+type FileRow = { id: string; url?: string; mime?: string; size: number; created_at: number };
 
 function fmtBytes(n: number) {
   if (n < 1024) return `${n} B`;
@@ -55,7 +55,7 @@ export default function Admin() {
         ]);
       });
       if (!ok) return;
-      const url = adminKeyInput ? `${api}/${encodeURIComponent(id)}?key=${encodeURIComponent(adminKeyInput)}` : `${api}/${encodeURIComponent(id)}`;
+      const url = adminKeyInput ? `${api}?id=${encodeURIComponent(id)}&key=${encodeURIComponent(adminKeyInput)}` : `${api}?id=${encodeURIComponent(id)}`;
       const res = await fetch(url, { method: 'DELETE' });
       if (!res.ok) throw new Error(await res.text());
       setRows((prev) => (prev || []).filter((r) => r.id !== id));
@@ -105,7 +105,10 @@ export default function Admin() {
           {rows.map((r) => (
             <View key={r.id} style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 8 }}>
               <Text style={{ fontWeight: '700', color: '#111827' }}>{r.id}</Text>
-              <Text style={{ color: '#6b7280' }}>{r.mime} · {fmtBytes(r.size)} · {timeAgo(r.created_at)}</Text>
+              <Text style={{ color: '#6b7280' }}>{r.mime || 'image/*'} · {fmtBytes(r.size)} · {timeAgo(r.created_at)}</Text>
+              {r.url ? (
+                <Text style={{ color: '#0f172a', marginTop: 4 }} numberOfLines={1}>{r.url}</Text>
+              ) : null}
               <View style={{ height: 8 }} />
               <View style={{ flexDirection: 'row' }}>
                 <TouchableOpacity onPress={() => remove(r.id)} style={{ backgroundColor: '#dc2626', borderRadius: 8, paddingVertical: 8, paddingHorizontal: 10 }}>
@@ -119,4 +122,3 @@ export default function Admin() {
     </ScrollView>
   );
 }
-
