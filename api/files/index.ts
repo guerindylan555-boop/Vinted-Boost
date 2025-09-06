@@ -21,10 +21,10 @@ app.post('/create-upload', async (c) => {
     const ext = filename && filename.includes('.') ? filename.split('.').pop() : 'bin';
     const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
     const path = `${prefix}/${id}.${ext}`;
-    const expiresIn = Math.max(60, Math.min(3600, Number(body?.expiresIn) || 600));
+    // Supabase createSignedUploadUrl does not take expiresIn as a number param; use options only.
     const supa = getSupaAdmin();
     const bucket = getBucket();
-    const { data, error } = await supa.storage.from(bucket).createSignedUploadUrl(path, expiresIn);
+    const { data, error } = await supa.storage.from(bucket).createSignedUploadUrl(path, { upsert: true } as any);
     if (error || !data) return c.json({ error: error?.message || 'Failed to create signed upload URL' }, 500);
     const { data: pub } = getSupaAdmin().storage.from(getBucket()).getPublicUrl(path);
     return c.json({ path, token: data.token, url: data.signedUrl, publicUrl: pub.publicUrl });
