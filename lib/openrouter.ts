@@ -160,3 +160,17 @@ export async function generateTryOnImage({ imageDataUrl, imageDataUrls, pose = '
     return { imageDataUrl: url, raw: json };
   }
 }
+
+// Helper: upload a data URL to server which saves it to Blob and returns URL
+export async function saveDataUrlToBlob(dataUrl: string, prefix: 'uploads' | 'outputs' = 'outputs') {
+  const baseEnv = (process as any)?.env?.EXPO_PUBLIC_API_BASE_URL || '';
+  const base = String(baseEnv);
+  const endpoint = base ? `${base.replace(/\/$/, '')}/api/files/save-data-url` : '/api/files/save-data-url';
+  const res = await fetch(endpoint, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ dataUrl, prefix }),
+  });
+  if (!res.ok) throw new Error(await res.text());
+  return (await res.json()) as { id: string; url: string; mime?: string };
+}

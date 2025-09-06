@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { corsStrict } from '../_lib/cors';
-import { put, list, del } from '@vercel/blob';
+import { put, list, del, generateUploadURL } from '@vercel/blob';
 
 const app = new Hono();
 
@@ -10,6 +10,16 @@ app.use('*', corsStrict);
 
 // Health
 app.get('/health', (c) => c.json({ status: 'ok' }));
+
+// Create a client-direct signed upload URL
+app.post('/create-upload', async (c) => {
+  try {
+    const { url, pathname } = await generateUploadURL({ access: 'public' } as any);
+    return c.json({ url, pathname });
+  } catch (e: any) {
+    return c.json({ error: e?.message || 'Failed to create upload URL' }, 500);
+  }
+});
 
 // Debug (requires ADMIN_KEY): shows env presence and DB connectivity
 app.get('/debug', async (c) => {

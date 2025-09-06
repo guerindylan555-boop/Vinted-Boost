@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { View, Text, ActivityIndicator } from 'react-native';
 import { useLocalSearchParams, router } from 'expo-router';
 import { getRun, updateRun } from '../lib/runStore';
-import { generateTryOnImage } from '../lib/openrouter';
+import { generateTryOnImage, saveDataUrlToBlob } from '../lib/openrouter';
+import { Platform } from 'react-native';
 
 export default function LoadingScreen() {
   const { run } = useLocalSearchParams<{ run?: string }>();
@@ -21,7 +22,14 @@ export default function LoadingScreen() {
       }
       try {
         const res = await generateTryOnImage({ imageDataUrl: data.inputDataUrl, apiKey: data.apiKey || undefined });
-        updateRun(run, { resultDataUrl: res.imageDataUrl, error: null });
+        // Try to persist output to Blob for history
+        let persisted = null as null | { id: string; url: string };
+        try {
+          if (typeof res.imageDataUrl === 'string' && res.imageDataUrl.startsWith('data:image')) {
+            persisted = await saveDataUrlToBlob(res.imageDataUrl, 'outputs');
+          }
+        } catch {}
+        updateRun(run, { resultDataUrl: persisted?.url || res.imageDataUrl, error: null });
         router.replace({ pathname: '/result', params: { run } });
       } catch (e: any) {
         const msg = e?.message ?? 'Échec de génération.';
@@ -42,4 +50,3 @@ export default function LoadingScreen() {
     </View>
   );
 }
-

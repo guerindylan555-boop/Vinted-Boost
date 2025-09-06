@@ -10,8 +10,9 @@
                     "deploy":  "npx expo export -p web && npx eas-cli@latest deploy",
                     "vercel-build": "npx expo export -p web"
                 },
-    "dependencies":  {
+  "dependencies":  {
                          "@tanstack/react-query":  "^5.87.1",
+                         "@vercel/postgres": "^0.8.0",
                          "expo":  "^53.0.4",
                          "expo-constants":  "~17.1.4",
                          "expo-file-system":  "^18.1.11",

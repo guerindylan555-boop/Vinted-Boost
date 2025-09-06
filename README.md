@@ -82,4 +82,20 @@ curl -s https://your-app.vercel.app/api/files/health
 - API:
   - GET `/api/files?limit=100[&key=ADMIN_KEY]`
   - DELETE `/api/files?id=uploads/<uuid>.<ext>[&key=ADMIN_KEY]`
+  
+### Upload direct (client → Blob)
+
+- Pré-signer:
+  - POST `/api/files/create-upload` → retourne `{ url, pathname }`.
+- Upload:
+  - `fetch(url, { method: 'POST', body: <fichier|Blob|ArrayBuffer>, headers: { 'Content-Type': '<mime>' } })`
+- Data URL (fallback):
+  - POST `/api/files/save-data-url` avec `{ dataUrl, prefix }` (server-side put vers Blob)
+
+## Historique
+
+- Stockage: Vercel Postgres (`@vercel/postgres`) — table `history` avec `id`, `created_at`, `input_url`, `input_path`, `output_url`, `output_path`, `input_mime`, `output_mime`.
+- API:
+  - GET `/api/history?limit=100[&key=ADMIN_KEY]`
+  - POST `/api/history` — body `{ input_url|input_path, output_url|output_path, input_mime?, output_mime? }`
 - Sécurité (optionnelle): définissez `ADMIN_KEY` côté Vercel (API). Si défini, la liste/suppression requiert `?key=...`. Pour auto‑remplir dans l’app, vous pouvez définir `EXPO_PUBLIC_ADMIN_KEY` (optionnel) côté client.
