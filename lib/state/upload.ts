@@ -11,7 +11,7 @@ export type LocalFile = {
   status: UploadStatus;
   progress?: number; // 0..1
   error?: string;
-  key?: string; // UploadThing file key
+  key?: string; // File id (Turso)
   url?: string; // public URL
 };
 
@@ -50,4 +50,3 @@ export const useUploadStore = create<UploadState & UploadActions>()((set, get) =
     set({ files: get().files.map((f) => (f.id === id ? { ...f, status: 'error', error } : f)) }),
   remove: (id) => set({ files: get().files.filter((f) => f.id !== id) }),
 }));
-

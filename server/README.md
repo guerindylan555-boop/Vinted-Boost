@@ -1,8 +1,18 @@
-UploadThing backend placeholder
+Turso upload backend (Hono)
 
-- Create a small server (Fastify/Hono/Next) exposing UploadThing FileRouter.
-- Configure an endpoint name `imageUploader` with constraints: images only, max 3 files, size up to 20MB, ACL `public-read`.
-- Set your server URL in an environment variable (e.g., EXPO_PUBLIC_UPLOADTHING_URL) for the Expo app to call.
+- API endpoints:
+  - POST `/api/files` — multipart/form-data (field `files`), jusqu’à 3 images, 16MB max chacune. Retourne `[ { id, url } ]`.
+  - GET `/api/files/:id` — renvoie l’image avec `Content-Type` correct et cache long.
 
-Example (Hono + Vercel/Node adapter) — not implemented here to keep client repo clean.
+- Storage: Turso (libSQL). Table `files(id TEXT PK, mime TEXT, size INTEGER, data BLOB, created_at INTEGER)`.
 
+- Env vars (Vercel → Project Settings → Environment Variables):
+  - `TURSO_DATABASE_URL`
+  - `TURSO_AUTH_TOKEN`
+
+- Client: utilisez `lib/upload/uploadService.ts` pour envoyer des images via `FormData`.
+
+Remarques:
+- Pour des volumes/tailles importantes, déporter les blobs sur un object storage (S3/R2) et garder Turso pour les métadonnées.
+- Les fonctions API utilisent le runtime Node (`@vercel/node`) pour une meilleure compatibilité multipart/env.
+ - Attention: les Serverless Functions Vercel ont une limite de taille de requête (~5MB). Pour des fichiers >5MB, utilisez un stockage objet (S3/R2/Vercel Blob) ou un serveur dédié.

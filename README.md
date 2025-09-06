@@ -11,6 +11,8 @@ Page mobile-first permettant d’upload une image de vêtement, de générer une
 EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxx npm run web
 # ou
 EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxx npm start
+## (optionnel) si vous testez l’upload en natif:
+EXPO_PUBLIC_API_BASE_URL=http://localhost:3000
 ```
 
 3. Sur le web, utilisez le bouton « Choisir une image ». Sur mobile (Expo Go), le sélecteur de galerie sera utilisé.
@@ -26,7 +28,7 @@ Réglages (clé API dans l’UI)
 - NativeWind (Tailwind RN) pour le style mobile-first
 - Upload web: input `capture` (fallback) / mobile: `expo-image-picker`
 - Appel IA client: OpenRouter `google/gemini-2.5-flash-image-preview`
-- Upload: UploadThing (`@uploadthing/expo`) — endpoint `imageUploader` (3 images, 20MB, ACL public-read)
+- Upload API: Turso-backed blob storage (Hono on Vercel). POST `/api/files` accepts up to 3 images; GET `/api/files/:id` serves them.
 
 ## Fichiers clés
 
@@ -37,10 +39,38 @@ Réglages (clé API dans l’UI)
 ## Notes
 
 - Production: privilégier un appel côté serveur (Fastify) pour ne pas exposer la clé. Ici, c’est un MVP client-side.
-- Vous pouvez enrichir (poses multiples, étapes temps réel, UploadThing, etc.).
+- Vous pouvez enrichir (poses multiples, étapes temps réel, etc.).
 
-## UploadThing (étape 2)
+## Upload via Turso (nouveau)
 
-- Backend: créez un FileRouter `imageUploader` (3 images, 20MB, ACL `public-read`). Voir `server/README.md`.
-- Front: le service `lib/upload/uploadService.ts` envoie les fichiers via `@uploadthing/expo` et remplit `useUploadStore` (progression, erreurs, URLs).
-- Config: définissez `EXPO_PUBLIC_UPLOADTHING_URL` si vous utilisez une origine personnalisée.
+- Backend: `api/files` utilise Turso pour stocker les blobs et renvoyer des URLs publiques.
+- Front: `lib/upload/uploadService.ts` envoie les fichiers via `FormData` (web et natif) et met à jour `useUploadStore`.
+- Limites: images uniquement, max 3 fichiers, max 16MB par fichier.
+ - Note Vercel: les Serverless Functions ont une limite de taille de requête d’environ 5MB. Au‑delà, envisagez un stockage objet (S3/R2/Vercel Blob) et n’enregistrez dans Turso que les métadonnées.
+
+### Configuration requise
+
+Définir ces variables (Vercel → Project → Settings → Environment Variables):
+
+```
+TURSO_DATABASE_URL=libsql://<your-db>.turso.io
+TURSO_AUTH_TOKEN=<turso-auth-token>
+```
+
+Optionnel pour l’app Expo native (Android/iOS):
+
+```
+EXPO_PUBLIC_API_BASE_URL=https://your-app.vercel.app
+```
+
+En local, vous pouvez exporter ces variables avant de démarrer.
+
+### Test rapide de l’API
+
+```sh
+# POST un fichier (web: via un formulaire; shell: via curl)
+curl -s -X POST -F "files=@/path/to/image.jpg" https://your-app.vercel.app/api/files | jq
+
+# GET le fichier
+curl -I https://your-app.vercel.app/api/files/<id>
+```

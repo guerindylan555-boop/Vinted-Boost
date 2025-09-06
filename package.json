@@ -12,7 +12,6 @@
                 },
     "dependencies":  {
                          "@tanstack/react-query":  "^5.87.1",
-                         "@uploadthing/expo":  "^7.2.6",
                          "expo":  "^53.0.4",
                          "expo-constants":  "~17.1.4",
                          "expo-file-system":  "^18.1.11",
@@ -22,6 +21,7 @@
                          "expo-splash-screen":  "~0.30.7",
                          "expo-status-bar":  "~2.2.3",
                          "hono":  "^4.9.6",
+                         "@libsql/client": "^0.14.0",
                          "nativewind":  "^4.1.23",
                          "react":  "19.0.0",
                          "react-dom":  "19.0.0",

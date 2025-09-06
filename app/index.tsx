@@ -5,6 +5,7 @@ import * as FileSystem from 'expo-file-system';
 import { loadApiKey, saveApiKey } from '../lib/settings';
 import { newRunId, setRun } from '../lib/runStore';
 import { router } from 'expo-router';
+import { uploadPickedFiles } from '../lib/upload/uploadService';
 
 function cn(...classes: (string | undefined | false)[]) {
   return classes.filter(Boolean).join(' ');
@@ -40,13 +41,23 @@ export default function Home() {
     if (!asset?.uri) return;
 
     try {
-      const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
-      const mime = (asset.mimeType && asset.mimeType.startsWith('image/')) ? asset.mimeType : 'image/jpeg';
-      const dataUrl = `data:${mime};base64,${base64}`;
       setInputPreviewUri(asset.uri);
-      setInputDataUrl(dataUrl);
+      const urls = await uploadPickedFiles([
+        {
+          id: 'native-1',
+          uri: asset.uri,
+          name: (asset as any).fileName || 'image.jpg',
+          type: asset.mimeType || 'image/jpeg',
+          size: (asset as any).fileSize,
+        },
+      ], {});
+      if (urls && urls[0]) {
+        setInputDataUrl(urls[0]);
+      } else {
+        throw new Error('Upload sans URL retournée.');
+      }
     } catch (e: any) {
-      setError(e?.message ?? 'Erreur de lecture du fichier.');
+      setError(e?.message ?? 'Échec d’upload.');
     }
   }
 
@@ -60,17 +71,24 @@ export default function Home() {
       const file = input.files?.[0];
       if (!file) return;
       try {
-        const reader = new FileReader();
-        reader.onload = () => {
-          const result = reader.result as string;
-          setInputDataUrl(result);
-          const url = URL.createObjectURL(file);
-          setInputPreviewUri(url);
-        };
-        reader.onerror = () => setError('Échec de lecture du fichier.');
-        reader.readAsDataURL(file);
+        const url = URL.createObjectURL(file);
+        setInputPreviewUri(url);
+        const urls = await uploadPickedFiles([
+          {
+            id: 'web-1',
+            webFile: file as any,
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          },
+        ], {});
+        if (urls && urls[0]) {
+          setInputDataUrl(urls[0]);
+        } else {
+          throw new Error('Upload sans URL retournée.');
+        }
       } catch (e: any) {
-        setError(e?.message ?? 'Échec de lecture du fichier.');
+        setError(e?.message ?? 'Échec d’upload.');
       } finally {
         input.remove();
       }
@@ -178,4 +196,3 @@ export default function Home() {
     </ScrollView>
   );
 }
-

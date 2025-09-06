@@ -1,43 +1,60 @@
-import { generateReactNativeHelpers } from '@uploadthing/expo';
 import { useUploadStore, LocalFile } from '../state/upload';
 
 export type UploadConfig = {
-  endpoint: string; // e.g. 'imageUploader'
-  url?: string; // optional custom server URL (default UploadThing URL configured in client)
+  url?: string; // optional API base (default: relative /api/files for web, env for native)
 };
 
 export type PickedFile = {
   id: string;
-  uri: string;
+  // React Native: use uri
+  uri?: string;
+  // Web: provide a File directly
+  webFile?: any; // File in browser; typed as any to avoid RN type issues
   name?: string;
   type?: string; // mime
   size?: number;
 };
 
-export async function uploadPickedFiles(files: PickedFile[], config: UploadConfig) {
+export async function uploadPickedFiles(files: PickedFile[], config: UploadConfig = {}) {
   const { setProgress, markUploaded, setError, addFiles } = useUploadStore.getState();
   // register files in store as 'picking'
   addFiles(files.map((f) => ({ id: f.id, uri: f.uri, name: f.name, size: f.size, type: f.type })) as Omit<LocalFile, 'status'>[]);
 
   try {
-    const baseUrl = config.url || process.env.EXPO_PUBLIC_UPLOADTHING_URL || undefined;
-    const { uploadFiles } = generateReactNativeHelpers(baseUrl ? { url: baseUrl as any } : undefined as any);
-    const res = await uploadFiles({
-      endpoint: config.endpoint,
-      files: files.map((f) => ({ uri: f.uri, name: f.name ?? 'image.jpg', type: f.type ?? 'image/jpeg' })),
-      onUploadProgress: ({ file, progress }: any) => {
-        const match = files.find((f) => f.uri === (file as any)?.uri);
-        if (match) setProgress(match.id, progress);
-      },
-    } as any);
+    const base = config.url || process.env.EXPO_PUBLIC_API_BASE_URL || '';
+    const endpoint = base ? `${base.replace(/\/$/, '')}/api/files` : '/api/files';
 
-    // res contains an array with { fileKey, fileUrl }
-    res.forEach((item, idx) => {
+    const form = new FormData();
+    for (const f of files) {
+      const hasWebFile = typeof (globalThis as any).File !== 'undefined' && f && (f as any).webFile instanceof (globalThis as any).File;
+      if (hasWebFile) {
+        form.append('files', (f as any).webFile);
+      } else if (f.uri) {
+        form.append('files', {
+          // @ts-expect-error React Native FormData file shape
+          uri: f.uri,
+          name: f.name || 'image.jpg',
+          type: f.type || 'image/jpeg',
+        } as any);
+      }
+    }
+
+    // Note: Fetch progress isn't available cross-platform without extra libs; we mark 0.5 then 1.0 heuristically.
+    files.forEach((f) => setProgress(f.id, 0.5));
+
+    const res = await fetch(endpoint, { method: 'POST', body: form as any });
+    if (!res.ok) {
+      const text = await res.text().catch(() => '');
+      throw new Error(text || `Upload failed: ${res.status}`);
+    }
+    const json = (await res.json()) as Array<{ id: string; url: string }>;
+
+    json.forEach((item, idx) => {
       const f = files[idx];
-      if (f) markUploaded(f.id, { key: item.key ?? (item as any).fileKey, url: item.url ?? (item as any).fileUrl });
+      if (f) markUploaded(f.id, { key: item.id, url: item.url });
     });
 
-    return res.map((r: any) => r.url ?? r.fileUrl).filter(Boolean) as string[];
+    return json.map((r) => r.url);
   } catch (e: any) {
     const msg = e?.message ?? 'Erreur upload';
     files.forEach((f) => setError(f.id, msg));
