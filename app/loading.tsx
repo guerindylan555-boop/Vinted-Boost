@@ -29,7 +29,20 @@ export default function LoadingScreen() {
             persisted = await saveDataUrlToBlob(res.imageDataUrl, 'outputs');
           }
         } catch {}
-        updateRun(run, { resultDataUrl: persisted?.url || res.imageDataUrl, error: null });
+        const outputUrl = persisted?.url || res.imageDataUrl;
+        updateRun(run, { resultDataUrl: outputUrl, error: null });
+        // Auto-record history (best effort)
+        try {
+          const baseEnv = (process as any)?.env?.EXPO_PUBLIC_API_BASE_URL || '';
+          const base = String(baseEnv);
+          const endpoint = base ? `${base.replace(/\/$/, '')}/api/history` : '/api/history';
+          const inputUrl = (data.inputDataUrl && data.inputDataUrl.startsWith('http')) ? data.inputDataUrl : null;
+          await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ input_url: inputUrl, output_url: outputUrl }),
+          }).catch(() => {});
+        } catch {}
         router.replace({ pathname: '/result', params: { run } });
       } catch (e: any) {
         const msg = e?.message ?? 'Échec de génération.';

@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { corsStrict } from '../_lib/cors';
-import { put, list, del, generateUploadURL } from '@vercel/blob';
+import { supaAdmin, BUCKET } from '../_lib/supabase';
 
 const app = new Hono();
 
@@ -11,17 +11,27 @@ app.use('*', corsStrict);
 // Health
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
-// Create a client-direct signed upload URL
+// Create a client-direct signed upload URL (Supabase Storage)
+// Body: { filename?: string, prefix?: string, expiresIn?: number }
 app.post('/create-upload', async (c) => {
   try {
-    const { url, pathname } = await generateUploadURL({ access: 'public' } as any);
-    return c.json({ url, pathname });
+    const body = await c.req.json().catch(() => ({})) as any;
+    const prefix = (body?.prefix && /^[a-z0-9_\/-]+$/i.test(body.prefix)) ? String(body.prefix).replace(/\/$/, '') : 'uploads';
+    const filename = String(body?.filename || '').trim();
+    const ext = filename && filename.includes('.') ? filename.split('.').pop() : 'bin';
+    const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
+    const path = `${prefix}/${id}.${ext}`;
+    const expiresIn = Math.max(60, Math.min(3600, Number(body?.expiresIn) || 600));
+    const { data, error } = await supaAdmin.storage.from(BUCKET).createSignedUploadUrl(path, expiresIn);
+    if (error || !data) return c.json({ error: error?.message || 'Failed to create signed upload URL' }, 500);
+    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    return c.json({ path, token: data.token, url: data.signedUrl, publicUrl: pub.publicUrl });
   } catch (e: any) {
     return c.json({ error: e?.message || 'Failed to create upload URL' }, 500);
   }
 });
 
-// Debug (requires ADMIN_KEY): shows env presence and DB connectivity
+// Debug (requires ADMIN_KEY): shows env presence and Storage connectivity
 app.get('/debug', async (c) => {
   const adminKey = (process as any)?.env?.ADMIN_KEY;
   const provided = c.req.query('key');
@@ -31,17 +41,19 @@ app.get('/debug', async (c) => {
   const env = (process as any)?.env || {};
   const out: any = {
     env: {
-      BLOB_READ_WRITE_TOKEN: Boolean(env.BLOB_READ_WRITE_TOKEN),
+      SUPABASE_URL: Boolean(env.SUPABASE_URL),
+      SUPABASE_SERVICE_ROLE_KEY: Boolean(env.SUPABASE_SERVICE_ROLE_KEY),
       ALLOWED_ORIGINS: (env.ALLOWED_ORIGINS || '').split(',').map((s: string) => s.trim()).filter(Boolean).length,
     },
-    blob: { ok: false, files: null as null | number, error: null as null | string },
+    storage: { ok: false, files: null as null | number, error: null as null | string },
   };
   try {
-    const { blobs } = await list({ prefix: 'uploads/' });
-    out.blob.ok = true;
-    out.blob.files = (blobs || []).length;
+    const { data, error } = await supaAdmin.storage.from(BUCKET).list('', { limit: 1 });
+    if (error) throw error;
+    out.storage.ok = true;
+    out.storage.files = (data || []).length;
   } catch (e: any) {
-    out.blob.error = e?.message || String(e);
+    out.storage.error = e?.message || String(e);
   }
   return c.json(out);
 });
@@ -54,11 +66,13 @@ app.get('/', async (c) => {
     return c.json({ error: 'Unauthorized' }, 401);
   }
   const limit = Math.max(1, Math.min(200, parseInt(c.req.query('limit') || '50', 10) || 50));
-  const { blobs } = await list({ prefix: 'uploads/' });
-  const rows = (blobs || [])
-    .sort((a, b) => new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime())
-    .slice(0, limit)
-    .map((b) => ({ id: b.pathname, url: b.url, size: b.size, created_at: new Date(b.uploadedAt).getTime(), mime: undefined }));
+  const { data, error } = await supaAdmin.storage.from(BUCKET).list('uploads', { limit, sortBy: { column: 'created_at', order: 'desc' } as any });
+  if (error) return c.json({ error: error.message }, 500);
+  const rows = (data || []).map((o) => {
+    const path = `uploads/${o.name}`;
+    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    return { id: path, url: pub.publicUrl, size: (o as any).size ?? 0, created_at: o.created_at ? new Date(o.created_at).getTime() : Date.now(), mime: undefined };
+  });
   return c.json(rows);
 });
 
@@ -102,10 +116,11 @@ app.post('/', async (c) => {
     const name = (file as any).name as string | undefined;
     const ext = (name && name.includes('.')) ? name.split('.').pop() : (mime.split('/')[1] || 'bin');
     const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2)) as string;
-    const pathname = `uploads/${id}.${ext}`;
-    const token = (process as any)?.env?.BLOB_READ_WRITE_TOKEN;
-    const resPut = await put(pathname, file as any, { access: 'public', contentType: mime, addRandomSuffix: false, token });
-    results.push({ id: pathname, url: resPut.url, size, mime });
+    const path = `uploads/${id}.${ext}`;
+    const { error } = await supaAdmin.storage.from(BUCKET).upload(path, file as any, { contentType: mime, upsert: true });
+    if (error) return c.json({ error: error.message }, 500);
+    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(path);
+    results.push({ id: path, url: pub.publicUrl, size, mime });
   }
 
   return c.json(results, 201);
@@ -118,8 +133,8 @@ app.delete('/', async (c) => {
   if (adminKey && provided !== adminKey) return c.json({ error: 'Unauthorized' }, 401);
   const id = c.req.query('id');
   if (!id) return c.json({ error: 'Missing id' }, 400);
-  const token = (process as any)?.env?.BLOB_READ_WRITE_TOKEN;
-  await del(id, { token });
+  const { error } = await supaAdmin.storage.from(BUCKET).remove([String(id)]);
+  if (error) return c.json({ error: error.message }, 500);
   return c.json({ ok: true });
 });
 

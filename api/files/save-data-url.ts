@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { corsStrict } from '../_lib/cors';
-import { put } from '@vercel/blob';
+import { supaAdmin, BUCKET } from '../_lib/supabase';
 
 const app = new Hono();
 app.use('*', corsStrict);
@@ -20,9 +20,10 @@ app.post('/', async (c) => {
     const ext = (mime.split('/')[1] || 'bin').replace(/[^a-z0-9]/gi, '') || 'bin';
     const id = (globalThis.crypto?.randomUUID?.() || Math.random().toString(36).slice(2));
     const pathname = `${prefix}/${id}.${ext}`;
-    const token = (process as any)?.env?.BLOB_READ_WRITE_TOKEN;
-    const resPut = await put(pathname, buf, { access: 'public', contentType: mime, addRandomSuffix: false, token });
-    return c.json({ id: pathname, url: resPut.url, mime });
+    const { error } = await supaAdmin.storage.from(BUCKET).upload(pathname, buf, { contentType: mime, upsert: true });
+    if (error) return c.json({ error: error.message }, 500);
+    const { data: pub } = supaAdmin.storage.from(BUCKET).getPublicUrl(pathname);
+    return c.json({ id: pathname, url: pub.publicUrl, mime });
   } catch (e: any) {
     return c.json({ error: e?.message || 'Failed to save data URL' }, 500);
   }
@@ -30,4 +31,3 @@ app.post('/', async (c) => {
 
 export const config = { runtime: 'nodejs' };
 export default handle(app);
-
