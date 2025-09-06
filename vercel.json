@@ -1,7 +1,11 @@
 {
   "version": 2,
+  "functions": {
+    "api/uploadthing/**": {
+      "runtime": "edge"
+    }
+  },
   "builds": [
-    { "src": "api/**/*.ts", "use": "@vercel/edge" },
     {
       "src": "package.json",
       "use": "@vercel/static-build",
