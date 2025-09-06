@@ -2,8 +2,5 @@
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "version": 2,
   "buildCommand": "npx expo export -p web",
-  "outputDirectory": "dist",
-  "functions": {
-    "api/**/*": { "runtime": "nodejs20.x" }
-  }
+  "outputDirectory": "dist"
 }
