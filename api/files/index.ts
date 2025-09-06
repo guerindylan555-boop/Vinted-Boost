@@ -7,6 +7,25 @@ const app = new Hono();
 // Health
 app.get('/', (c) => c.json({ status: 'ok' }));
 
+// List files (admin). If ADMIN_KEY is set, require ?key=...
+app.get('/', async (c) => {
+  await ensureSchema();
+  const adminKey = (process as any)?.env?.ADMIN_KEY;
+  const provided = c.req.query('key');
+  if (adminKey && provided !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+
+  const db = getDb();
+  const limit = Math.max(1, Math.min(200, parseInt(c.req.query('limit') || '50', 10) || 50));
+  const res = await db.execute({
+    sql: 'SELECT id, mime, size, created_at FROM files ORDER BY created_at DESC LIMIT ?',
+    args: [limit],
+  });
+  const rows = res.rows as any[];
+  return c.json(rows.map((r) => ({ id: r.id, mime: r.mime, size: r.size, created_at: r.created_at })));
+});
+
 // Upload up to 3 images via multipart/form-data (field name: "files")
 app.post('/', async (c) => {
   await ensureSchema();

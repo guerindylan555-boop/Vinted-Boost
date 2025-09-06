@@ -15,6 +15,7 @@ export default function Home() {
   const [inputPreviewUri, setInputPreviewUri] = useState<string | null>(null);
   const [inputDataUrl, setInputDataUrl] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [uploading, setUploading] = useState(false);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [tempKey, setTempKey] = useState('');
@@ -42,20 +43,39 @@ export default function Home() {
 
     try {
       setInputPreviewUri(asset.uri);
-      const urls = await uploadPickedFiles([
-        {
-          id: 'native-1',
-          uri: asset.uri,
-          name: (asset as any).fileName || 'image.jpg',
-          type: asset.mimeType || 'image/jpeg',
-          size: (asset as any).fileSize,
-        },
-      ], {});
-      if (urls && urls[0]) {
-        setInputDataUrl(urls[0]);
-      } else {
-        throw new Error('Upload sans URL retournée.');
+      // Immediate fallback: data URL enables the Generate button even if upload fails
+      const mime = (asset.mimeType && asset.mimeType.startsWith('image/')) ? asset.mimeType : 'image/jpeg';
+      try {
+        const base64 = await FileSystem.readAsStringAsync(asset.uri, { encoding: FileSystem.EncodingType.Base64 });
+        const dataUrl = `data:${mime};base64,${base64}`;
+        setInputDataUrl(dataUrl);
+      } catch (e: any) {
+        // Non-fatal for enabling upload URL; we still try remote upload
       }
+
+      // Upload in background; if success, prefer the public URL
+      setUploading(true);
+      (async () => {
+        try {
+          const urls = await uploadPickedFiles([
+            {
+              id: 'native-1',
+              uri: asset.uri,
+              name: (asset as any).fileName || 'image.jpg',
+              type: asset.mimeType || 'image/jpeg',
+              size: (asset as any).fileSize,
+            },
+          ], {});
+          if (urls && urls[0]) {
+            setInputDataUrl(urls[0]);
+          }
+        } catch (e: any) {
+          // Keep local data URL; surface error unobtrusively
+          setError(e?.message ?? 'Échec d’upload.');
+        } finally {
+          setUploading(false);
+        }
+      })();
     } catch (e: any) {
       setError(e?.message ?? 'Échec d’upload.');
     }
@@ -71,22 +91,40 @@ export default function Home() {
       const file = input.files?.[0];
       if (!file) return;
       try {
-        const url = URL.createObjectURL(file);
-        setInputPreviewUri(url);
-        const urls = await uploadPickedFiles([
-          {
-            id: 'web-1',
-            webFile: file as any,
-            name: file.name,
-            type: file.type,
-            size: file.size,
-          },
-        ], {});
-        if (urls && urls[0]) {
-          setInputDataUrl(urls[0]);
-        } else {
-          throw new Error('Upload sans URL retournée.');
-        }
+        const previewUrl = URL.createObjectURL(file);
+        setInputPreviewUri(previewUrl);
+
+        // Immediate fallback: data URL via FileReader (enables Generate button)
+        const reader = new FileReader();
+        reader.onload = () => {
+          const result = reader.result as string;
+          if (typeof result === 'string') setInputDataUrl(result);
+        };
+        reader.onerror = () => {/* ignore */};
+        reader.readAsDataURL(file);
+
+        // Upload in background; if success, prefer the public URL
+        setUploading(true);
+        (async () => {
+          try {
+            const urls = await uploadPickedFiles([
+              {
+                id: 'web-1',
+                webFile: file as any,
+                name: file.name,
+                type: file.type,
+                size: file.size,
+              },
+            ], {});
+            if (urls && urls[0]) {
+              setInputDataUrl(urls[0]);
+            }
+          } catch (e: any) {
+            setError(e?.message ?? 'Échec d’upload.');
+          } finally {
+            setUploading(false);
+          }
+        })();
       } catch (e: any) {
         setError(e?.message ?? 'Échec d’upload.');
       } finally {
@@ -143,7 +181,10 @@ export default function Home() {
           )}
         </View>
 
-        {/* Generate button */}
+        {/* Uploading indicator + Generate button */}
+        {uploading ? (
+          <Text style={{ marginTop: 8, color: '#6b7280' }}>Envoi en cours…</Text>
+        ) : null}
         <View style={{ height: 16 }} />
         <TouchableOpacity
           onPress={onGenerate}
