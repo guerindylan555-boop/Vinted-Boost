@@ -2,22 +2,16 @@ import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { createUploadthing, type FileRouter, createRouteHandler } from 'uploadthing/server';
 
-export const config = {
-  runtime: 'edge',
-};
-
+// Node runtime by default with @vercel/node
 const app = new Hono();
 
 const f = createUploadthing();
 
 export const fileRouter = {
-  // Endpoint slug must match the client: endpoint: 'imageUploader'
   imageUploader: f({
     image: { maxFileCount: 3, maxFileSize: '16MB' },
   })
-    .middleware(async ({ req }) => {
-      // Place to verify auth/session if needed
-      // Example: const userId = await getUserIdFromHeader(req)
+    .middleware(async () => {
       return {};
     })
     .onUploadComplete(async ({ file }) => {
@@ -29,14 +23,14 @@ export type AppFileRouter = typeof fileRouter;
 
 const utHandler = createRouteHandler({ router: fileRouter });
 
-// Health check for base path (useful when visiting /api/uploadthing in a browser)
+// Health check at base path
 app.get('/', (c) => c.json({ status: 'ok' }));
-app.get('/api/uploadthing', (c) => c.json({ status: 'ok' }));
 
-// Catch-all under this function path: supports /api/uploadthing and /api/uploadthing/<slug>
+// Delegate to UploadThing handler for all methods
 app.all('*', async (c) => {
   const res = await utHandler(c.req.raw);
   return res as Response;
 });
 
 export default handle(app);
+
