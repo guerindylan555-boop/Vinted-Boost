@@ -29,6 +29,10 @@ export type AppFileRouter = typeof fileRouter;
 
 const utHandler = createRouteHandler({ router: fileRouter });
 
+// Health check for base path (useful when visiting /api/uploadthing in a browser)
+app.get('/', (c) => c.json({ status: 'ok' }));
+app.get('/api/uploadthing', (c) => c.json({ status: 'ok' }));
+
 // Catch-all under this function path: supports /api/uploadthing and /api/uploadthing/<slug>
 app.all('*', async (c) => {
   const res = await utHandler(c.req.raw);
