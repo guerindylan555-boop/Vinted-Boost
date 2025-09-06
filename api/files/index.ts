@@ -11,6 +11,35 @@ app.use('*', corsStrict);
 // Health
 app.get('/health', (c) => c.json({ status: 'ok' }));
 
+// Debug (requires ADMIN_KEY): shows env presence and DB connectivity
+app.get('/debug', async (c) => {
+  const adminKey = (process as any)?.env?.ADMIN_KEY;
+  const provided = c.req.query('key');
+  if (adminKey && provided !== adminKey) {
+    return c.json({ error: 'Unauthorized' }, 401);
+  }
+  const env = (process as any)?.env || {};
+  const out: any = {
+    env: {
+      TURSO_DATABASE_URL: Boolean(env.TURSO_DATABASE_URL),
+      TURSO_AUTH_TOKEN: Boolean(env.TURSO_AUTH_TOKEN),
+      ALLOWED_ORIGINS: (env.ALLOWED_ORIGINS || '').split(',').map((s: string) => s.trim()).filter(Boolean).length,
+    },
+    db: { ok: false, files: null as null | number, error: null as null | string },
+  };
+  try {
+    await ensureSchema();
+    const db = getDb();
+    const res = await db.execute("SELECT count(*) as c FROM files");
+    const n = (res.rows?.[0] as any)?.c as number | undefined;
+    out.db.ok = true;
+    out.db.files = typeof n === 'number' ? n : 0;
+  } catch (e: any) {
+    out.db.error = e?.message || String(e);
+  }
+  return c.json(out);
+});
+
 // List files (admin). If ADMIN_KEY is set, require ?key=...
 app.get('/', async (c) => {
   await ensureSchema();
