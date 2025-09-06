@@ -1,24 +1,46 @@
-# Expo Router Example
+# Vinted Try-On (MVP)
 
-Use [`expo-router`](https://docs.expo.dev/router/introduction/) to build native navigation using files in the `app/` directory.
+Page mobile-first permettant d’upload une image de vêtement, de générer une image « portée » (via OpenRouter / Google Gemini 2.5 preview), et d’afficher le résultat.
 
-## Launch your own
+## Démarrage rapide
 
-[![Launch with Expo](https://github.com/expo/examples/blob/master/.gh-assets/launch.svg?raw=true)](https://launch.expo.dev/?github=https://github.com/expo/examples/tree/master/with-router)
-
-## 🚀 How to use
+1. Créez une clé API OpenRouter: https://openrouter.ai/settings/keys
+2. Exportez la clé au lancement (les variables débutant par `EXPO_PUBLIC_` sont exposées au client):
 
 ```sh
-npx create-expo-app -e with-router
+EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxx npm run web
+# ou
+EXPO_PUBLIC_OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxx npm start
 ```
 
-## Deploy
+3. Sur le web, utilisez le bouton « Choisir une image ». Sur mobile (Expo Go), le sélecteur de galerie sera utilisé.
+4. Cliquez « Générer » puis attendez le chargement; le résultat s’affiche en 4:5 avec le label « Image assistée par IA ».
 
-Deploy on all platforms with Expo Application Services (EAS).
+Réglages (clé API dans l’UI)
+- Cliquez sur « Réglages » en haut de l’écran pour coller votre clé `sk-or-...`.
+- La clé est stockée localement (LocalStorage sur web, fichier app sur mobile) et surcharge la variable d’environnement si présente.
 
-- Deploy the website: `npx eas-cli deploy` — [Learn more](https://docs.expo.dev/eas/hosting/get-started/)
-- Deploy on iOS and Android using: `npx eas-cli build` — [Learn more](https://expo.dev/eas)
+## Stack
 
-## 📝 Notes
+- Expo (SDK 53) + Expo Router
+- NativeWind (Tailwind RN) pour le style mobile-first
+- Upload web: input `capture` (fallback) / mobile: `expo-image-picker`
+- Appel IA client: OpenRouter `google/gemini-2.5-flash-image-preview`
+- Upload: UploadThing (`@uploadthing/expo`) — endpoint `imageUploader` (3 images, 20MB, ACL public-read)
 
-- [Expo Router: Docs](https://docs.expo.dev/router/introduction/)
+## Fichiers clés
+
+- `app/index.tsx`: écran unique Upload → Générer → Résultat
+- `lib/openrouter.ts`: appel API OpenRouter pour l’image « portée »
+- `tailwind.config.js` + `babel.config.js`: config NativeWind
+
+## Notes
+
+- Production: privilégier un appel côté serveur (Fastify) pour ne pas exposer la clé. Ici, c’est un MVP client-side.
+- Vous pouvez enrichir (poses multiples, étapes temps réel, UploadThing, etc.).
+
+## UploadThing (étape 2)
+
+- Backend: créez un FileRouter `imageUploader` (3 images, 20MB, ACL `public-read`). Voir `server/README.md`.
+- Front: le service `lib/upload/uploadService.ts` envoie les fichiers via `@uploadthing/expo` et remplit `useUploadStore` (progression, erreurs, URLs).
+- Config: définissez `EXPO_PUBLIC_UPLOADTHING_URL` si vous utilisez une origine personnalisée.
