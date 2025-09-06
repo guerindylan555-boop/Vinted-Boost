@@ -21,8 +21,11 @@ export async function uploadPickedFiles(files: PickedFile[], config: UploadConfi
   addFiles(files.map((f) => ({ id: f.id, uri: f.uri, name: f.name, size: f.size, type: f.type })) as Omit<LocalFile, 'status'>[]);
 
   try {
-    const base = config.url || process.env.EXPO_PUBLIC_API_BASE_URL || '';
-    const endpoint = base ? `${base.replace(/\/$/, '')}/api/files` : '/api/files';
+    const isWeb = typeof document !== 'undefined';
+    const base = (config.url || (process as any)?.env?.EXPO_PUBLIC_API_BASE_URL || '').toString();
+    const endpoint = base
+      ? `${base.replace(/\/$/, '')}/api/files`
+      : (isWeb ? '/api/files' : (() => { throw new Error('EXPO_PUBLIC_API_BASE_URL manquant pour l’upload natif. Définissez une URL déployée (ex: https://<app>.vercel.app).'); })());
 
     const form = new FormData();
     for (const f of files) {
@@ -42,7 +45,15 @@ export async function uploadPickedFiles(files: PickedFile[], config: UploadConfi
     // Note: Fetch progress isn't available cross-platform without extra libs; we mark 0.5 then 1.0 heuristically.
     files.forEach((f) => setProgress(f.id, 0.5));
 
-    const res = await fetch(endpoint, { method: 'POST', body: form as any });
+    // Add a 30s timeout to avoid hanging forever
+    const ac = new AbortController();
+    const t = setTimeout(() => ac.abort(), 30_000);
+    let res: Response;
+    try {
+      res = await fetch(endpoint, { method: 'POST', body: form as any, signal: ac.signal });
+    } finally {
+      clearTimeout(t);
+    }
     if (!res.ok) {
       const text = await res.text().catch(() => '');
       throw new Error(text || `Upload failed: ${res.status}`);

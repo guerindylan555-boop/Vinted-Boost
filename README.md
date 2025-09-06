@@ -73,6 +73,9 @@ curl -s -X POST -F "files=@/path/to/image.jpg" https://your-app.vercel.app/api/f
 
 # GET le fichier
 curl -I https://your-app.vercel.app/api/files/<id>
+
+# Health
+curl -s https://your-app.vercel.app/api/files/health
 ```
 
 ## Admin fichiers

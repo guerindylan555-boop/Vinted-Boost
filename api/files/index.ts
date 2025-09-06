@@ -1,11 +1,15 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { ensureSchema, getDb } from '../_lib/db';
+import { cors } from 'hono/cors';
 
 const app = new Hono();
 
+// CORS for cross-origin requests (Expo web dev, native hitting prod)
+app.use('*', cors({ origin: '*', allowMethods: ['GET', 'POST', 'DELETE', 'OPTIONS'], allowHeaders: ['Content-Type'] }));
+
 // Health
-app.get('/', (c) => c.json({ status: 'ok' }));
+app.get('/health', (c) => c.json({ status: 'ok' }));
 
 // List files (admin). If ADMIN_KEY is set, require ?key=...
 app.get('/', async (c) => {
