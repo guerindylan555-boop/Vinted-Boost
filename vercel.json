@@ -1,8 +1,5 @@
 {
   "version": 2,
-  "functions": {
-    "api/uploadthing/**": { "runtime": "edge" }
-  },
   "buildCommand": "npm run vercel-build",
   "outputDirectory": "dist"
 }
