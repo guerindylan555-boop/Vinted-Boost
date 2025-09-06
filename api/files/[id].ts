@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { handle } from 'hono/vercel';
 import { corsStrict } from '../_lib/cors';
-import { del } from '@vercel/blob';
 
 const app = new Hono();
 
@@ -11,8 +10,8 @@ app.use('*', corsStrict);
 app.get('/:id', async (c) => {
   const id = c.req.param('id');
   if (!id) return c.json({ error: 'Missing id' }, 400);
-  // We don't know the extension here; prefer using the blob URL returned at upload time.
-  return c.json({ error: 'Use the returned Blob URL to fetch the file.' }, 400);
+  // We don't know the extension here; prefer using the public URL returned at upload time (Supabase Storage).
+  return c.json({ error: 'Use the returned public URL to fetch the file.' }, 400);
 });
 
 // Delete (admin). If ADMIN_KEY is set, require ?key=...
